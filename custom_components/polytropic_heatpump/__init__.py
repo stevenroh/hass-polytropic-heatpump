@@ -13,7 +13,7 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant
 
-from .const import CONF_DEBUG, DEFAULT_SCAN_INTERVAL
+from .const import CONF_DEBUG, CONF_SAFE_MODE, DEFAULT_SAFE_MODE, DEFAULT_SCAN_INTERVAL
 from .coordinator import PolytropicCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -42,6 +42,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         port=entry.data[CONF_PORT],
         slave=entry.data[CONF_SLAVE],
         scan_interval=entry.options.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL),
+        safe_mode=entry.options.get(CONF_SAFE_MODE, DEFAULT_SAFE_MODE),
     )
 
     # Initial data fetch – raises ConfigEntryNotReady on failure

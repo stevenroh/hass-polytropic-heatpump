@@ -1,6 +1,8 @@
 """Climate platform for Polytropic Heat Pump."""
 from __future__ import annotations
 
+import logging
+
 from homeassistant.components.climate import (
     ClimateEntity,
     ClimateEntityFeature,
@@ -14,6 +16,8 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .coordinator import PolytropicCoordinator, device_info
+
+_LOGGER = logging.getLogger(__name__)
 
 DOMAIN = "polytropic_heatpump"
 
@@ -92,6 +96,36 @@ class PolytropicClimate(CoordinatorEntity[PolytropicCoordinator], ClimateEntity)
         self._attr_device_info = device_info(entry)
 
     # ------------------------------------------------------------------
+    # Safe mode (read-only)
+    # ------------------------------------------------------------------
+
+    @property
+    def supported_features(self) -> ClimateEntityFeature:
+        """Hide write controls while safe mode is enabled."""
+        if self.coordinator.safe_mode:
+            return ClimateEntityFeature(0)
+        return self._attr_supported_features
+
+    @property
+    def hvac_modes(self) -> list[HVACMode]:
+        """Only expose the current mode in safe mode (no mode switching)."""
+        if self.coordinator.safe_mode:
+            return [self.hvac_mode]
+        return self._attr_hvac_modes
+
+    @property
+    def preset_modes(self) -> list[str] | None:
+        if self.coordinator.safe_mode:
+            return None
+        return self._attr_preset_modes
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        attrs = dict(super().extra_state_attributes or {})
+        attrs["safe_mode"] = self.coordinator.safe_mode
+        return attrs
+
+    # ------------------------------------------------------------------
     # State
     # ------------------------------------------------------------------
 
@@ -168,12 +202,21 @@ class PolytropicClimate(CoordinatorEntity[PolytropicCoordinator], ClimateEntity)
         await self.coordinator.async_set_control(mode_id=mode_id)
 
     async def async_set_temperature(self, **kwargs) -> None:
+        if self.coordinator.safe_mode:
+            _LOGGER.warning("Safe mode is enabled — setpoint change ignored")
+            return
         temp = kwargs.get("temperature")
         if temp is not None:
             await self.coordinator.async_set_target_temp(float(temp))
 
     async def async_turn_on(self) -> None:
+        if self.coordinator.safe_mode:
+            _LOGGER.warning("Safe mode is enabled — turn_on ignored")
+            return
         await self.coordinator.async_turn_on()
 
     async def async_turn_off(self) -> None:
+        if self.coordinator.safe_mode:
+            _LOGGER.warning("Safe mode is enabled — turn_off ignored")
+            return
         await self.coordinator.async_turn_off()

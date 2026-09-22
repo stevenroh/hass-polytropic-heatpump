@@ -157,10 +157,24 @@ class ModbusRTUClient:
         await self._writer.drain()
 
         try:
-            response = await asyncio.wait_for(
-                self._reader.readexactly(expected),
+            # Read the 3-byte header first. Exception frames are only 5 bytes
+            # total, so waiting for a full data response would hang until
+            # timeout instead of surfacing the exception code.
+            header = await asyncio.wait_for(
+                self._reader.readexactly(3),
                 timeout=self._timeout,
             )
+            if header[1] & 0x80:
+                tail = await asyncio.wait_for(
+                    self._reader.readexactly(2),
+                    timeout=self._timeout,
+                )
+            else:
+                tail = await asyncio.wait_for(
+                    self._reader.readexactly(expected - 3),
+                    timeout=self._timeout,
+                )
+            response = header + tail
         except asyncio.IncompleteReadError as exc:
             raise ModbusError(f"Connection closed mid-read: {exc}") from exc
 

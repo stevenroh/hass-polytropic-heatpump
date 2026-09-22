@@ -24,6 +24,8 @@ from homeassistant.helpers.selector import (
 from .modbus_client import ModbusRTUClient, ModbusError
 from .const import (
     CONF_DEBUG,
+    CONF_SAFE_MODE,
+    DEFAULT_SAFE_MODE,
     DEFAULT_SCAN_INTERVAL,
     MAX_SCAN_INTERVAL,
     MIN_SCAN_INTERVAL,
@@ -74,13 +76,14 @@ class PolytropicConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
             client = ModbusRTUClient(host=host, port=port, slave=slave, timeout=5.0)
             try:
-                async with asyncio.timeout(6.0):
-                    async with client:
-                        await client.read_holding_register(REG_CONTROL_WORD)
+                await asyncio.wait_for(
+                    _probe(host, port, slave),
+                    timeout=6.0,
+                )
             except ModbusError as exc:
                 _LOGGER.debug("Modbus probe failed: %s", exc)
                 errors["base"] = "modbus_error"
-            except (TimeoutError, asyncio.TimeoutError, OSError, ConnectionRefusedError) as exc:
+            except (TimeoutError, OSError) as exc:
                 _LOGGER.debug("Cannot connect: %s", exc)
                 errors["base"] = "cannot_connect"
             except Exception as exc:  # noqa: BLE001
@@ -130,6 +133,12 @@ class PolytropicOptionsFlow(config_entries.OptionsFlow):
                     vol.Required(
                         CONF_DEBUG,
                         default=self.config_entry.options.get(CONF_DEBUG, False),
+                    ): BooleanSelector(),
+                    vol.Required(
+                        CONF_SAFE_MODE,
+                        default=self.config_entry.options.get(
+                            CONF_SAFE_MODE, DEFAULT_SAFE_MODE
+                        ),
                     ): BooleanSelector(),
                 }
             ),

@@ -135,7 +135,11 @@ BIT503_DEFROST               = 0x8000
 # Options
 # ---------------------------------------------------------------------------
 CONF_DEBUG = "debug_logging"
+CONF_SAFE_MODE = "safe_mode"
 
 DEFAULT_SCAN_INTERVAL = 60
 MIN_SCAN_INTERVAL     = 15
 MAX_SCAN_INTERVAL     = 900
+
+# Safe mode (read-only) is ON by default: no FC 0x06 writes are sent.
+DEFAULT_SAFE_MODE = True

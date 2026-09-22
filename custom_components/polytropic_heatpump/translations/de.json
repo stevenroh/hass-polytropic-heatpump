@@ -5,7 +5,8 @@
         "title": "Polytropic Wärmepumpe Optionen",
         "data": {
           "scan_interval": "Abfrageintervall (Sekunden, 15–900)",
-          "debug_logging": "Debug-Protokollierung aktivieren (protokolliert rohe Modbus-Frames)"
+          "debug_logging": "Debug-Protokollierung aktivieren (protokolliert rohe Modbus-Frames)",
+          "safe_mode": "Sicherheitsmodus (nur Lesen — deaktiviert alle Modbus-Schreibvorgänge)"
         }
       }
     }

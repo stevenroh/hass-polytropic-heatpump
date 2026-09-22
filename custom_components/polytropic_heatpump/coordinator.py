@@ -32,6 +32,7 @@ from .const import (
     REG_CONTROL_WORD, REG_SET_TEMP,
     CTRL_MODE_MASK, CTRL_ON_OFF,
     BIT503_DEFROST,
+    DEFAULT_SAFE_MODE,
     DEFAULT_SCAN_INTERVAL, MIN_SCAN_INTERVAL, MAX_SCAN_INTERVAL,
 )
 from .modbus_client import ModbusRTUClient, ModbusError
@@ -78,6 +79,7 @@ class PolytropicCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             port: int,
             slave: int,
             scan_interval: int = DEFAULT_SCAN_INTERVAL,
+            safe_mode: bool = DEFAULT_SAFE_MODE,
     ) -> None:
         clamped = max(MIN_SCAN_INTERVAL, min(MAX_SCAN_INTERVAL, int(scan_interval)))
         super().__init__(
@@ -95,6 +97,9 @@ class PolytropicCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         )
         self._cached: dict[str, Any] = {}
         self._bus_lock = asyncio.Lock()  # serialise poll + write access
+        self.safe_mode: bool = bool(safe_mode)
+        if self.safe_mode:
+            _LOGGER.info("Safe mode enabled — Modbus writes are disabled (read-only)")
 
     # ------------------------------------------------------------------
     # Poll
@@ -231,6 +236,13 @@ class PolytropicCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     async def _write(self, address: int, value: int) -> None:
         """Write a single register. Uses its own TCP session."""
+        if self.safe_mode:
+            _LOGGER.warning(
+                "Safe mode is enabled — write to register %d (value %d) ignored",
+                address,
+                value,
+            )
+            return
         try:
             async with self._bus_lock:
                 async with self._client:
@@ -251,6 +263,9 @@ class PolytropicCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         on: bool | None = None,
     ) -> None:
         """Update mode bits and/or on/off bit in a single FC 0x06 write."""
+        if self.safe_mode:
+            _LOGGER.warning("Safe mode is enabled — control write ignored")
+            return
         ctrl = self._cached.get("control_word", 0)
         new_ctrl = ctrl
         if mode_id is not None:
@@ -274,6 +289,9 @@ class PolytropicCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         await self.async_set_control(mode_id=mode_id)
 
     async def async_set_target_temp(self, temp_c: float) -> None:
+        if self.safe_mode:
+            _LOGGER.warning("Safe mode is enabled — setpoint write ignored")
+            return
         clamped = round(max(25.0, min(60.0, temp_c)), 1)
         raw = int(clamped * 10)
         await self._write(REG_SET_TEMP, raw)

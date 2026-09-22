@@ -49,6 +49,17 @@ The default slave address is 17 (all DIP switches OFF).
 |-------|-------------|---------|
 | Poll interval | How often to poll the heat pump, in seconds (15–900) | 60 |
 | Debug logging | Log raw Modbus frames for troubleshooting | Off |
+| Safe mode | Read-only mode: disables all Modbus writes (climate control, setpoint) | **On** |
+
+### Safe mode (read-only)
+
+Safe mode is **enabled by default**. While active:
+
+- All sensors and binary sensors still update (reads are unaffected)
+- The climate entity becomes read-only: HVAC mode, presets, on/off, and setpoint controls are hidden
+- Any write attempt (FC 0x06) is blocked and logged as a warning — no register is modified
+
+This protects unverified hardware/register maps. After confirming telemetry values look correct against the unit's display, turn **Safe mode** off under **Configure** to enable full climate control.
 
 ## Entities
 
