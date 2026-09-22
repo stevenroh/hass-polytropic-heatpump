@@ -29,12 +29,24 @@ from .const import (
     DEFAULT_SCAN_INTERVAL,
     MAX_SCAN_INTERVAL,
     MIN_SCAN_INTERVAL,
-    REG_CONTROL_WORD,
+    REG_RUNNING_MODE,
 )
 
 _LOGGER = logging.getLogger(__name__)
 
 DOMAIN = "polytropic_heatpump"
+
+
+async def _probe(host: str, port: int, slave: int) -> None:
+    """Open a session and read a safe holding register to verify the bridge.
+
+    Uses register 62 (supported running modes) — read-only and outside the
+    forbidden 60–61 range. Raises ModbusError / TimeoutError / OSError on
+    failure, which async_step_user maps to form errors.
+    """
+    client = ModbusRTUClient(host=host, port=port, slave=slave, timeout=5.0)
+    async with client:
+        await client.read_holding_register(REG_RUNNING_MODE)
 
 STEP_USER_SCHEMA = vol.Schema(
     {
@@ -74,7 +86,6 @@ class PolytropicConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             await self.async_set_unique_id(f"{host}:{port}:{slave}")
             self._abort_if_unique_id_configured()
 
-            client = ModbusRTUClient(host=host, port=port, slave=slave, timeout=5.0)
             try:
                 await asyncio.wait_for(
                     _probe(host, port, slave),

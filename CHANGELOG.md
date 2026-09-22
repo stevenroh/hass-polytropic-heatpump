@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+- Config flow setup always failed with a generic "unknown" error: `_probe()` was called but never defined (`NameError`, introduced in 1c792bc). Added the missing helper, which now reads holding register 62 (safe, outside forbidden 60–61) to verify bridge connectivity before creating the entry.
+- Remove dead `client = ModbusRTUClient(...)` left behind by the same refactor (the probe creates its own client).
+- Replace unused `REG_CONTROL_WORD` import with `REG_RUNNING_MODE` in config_flow.py.
+
+### Added
+- **ESPHome Pico 2 W RS485 bridge** (`esphome/heatpump-bridge.yaml`): transparent Modbus RTU-over-TCP server on port 8899 that replaces the Waveshare RS485-to-ETH gateway. Uses `nebulous/esphome-uart-link` (`uart_tcp_server` + `uart_bridge`), Waveshare Pico-2CH-RS485 channel 0 (GPIO0/GPIO1), exclusive client mode, board `rpipico2w`. The HA integration is unchanged and connects to the Pico exactly as it did to the gateway.
+- `esphome/secrets.yaml.example` — template for WiFi SSID/password and AP password.
+- `esphome/.gitignore` — excludes local `secrets.yaml` and `.esphome/` build artifacts.
+
 ## [1.2.0] - 2026-05-24
 
 - Coalesce mode + power writes when turning the heat pump on from OFF, one modbus write instead of two
