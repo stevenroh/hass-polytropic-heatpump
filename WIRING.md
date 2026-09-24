@@ -79,19 +79,23 @@ If communication fails after wiring, **swap A and B** — RS485 A/B polarity is
 the most common wiring mistake. The SMAJ12CA TVS diodes on the HAT protect
 against surges but do not correct swapped polarity.
 
-### Termination (120 Ω)
+### Termination (120 Ω) — always on
 
-The HAT has an on-board **120 R** resistor (R8) between A and B, enabled by
-solder jumpers / headers **H1/H2**:
+The HAT has an on-board **120 R** resistor (R8) hard-wired between A and B.
+There is **no jumper to enable/disable it** — the netlist shows R8 connected
+directly to the `485_A_1`/`485_B_1` nets.
 
-| Scenario | Termination |
-|----------|-------------|
-| This bridge is the **only** device at the far end of the cable, heat pump has its own termination | **Enable** (bridge the jumper) |
-| Multiple devices on the bus, termination already at each physical end | **Disable** (leave jumper open) |
-| Short cable (< 5 m), single slave | Usually fine either way |
+`H1`/`H2` (and `H3`/`H4` for channel 2) are 3-pin **A/B/GND connection
+headers** — the second interface option alongside the screw terminals — not
+termination jumpers.
 
-For a typical point-to-point link (bridge ↔ heat pump only), enable termination
-on the HAT if the heat pump side already terminates, or enable it on both ends.
+| Scenario | Effective termination |
+|----------|----------------------|
+| Point-to-point (bridge ↔ heat pump), heat pump terminates too | 120 Ω ∥ 120 Ω = **60 Ω — correct**, standard two-end termination |
+| Point-to-point, heat pump does **not** terminate | 120 Ω at bridge end only — usually fine on short cables |
+| Multi-drop bus with termination at each physical end already | Bridge adds a **third** 120 Ω — normally tolerable, but if you need it off, desolder R8 or cut the trace |
+
+For the typical install here (bridge ↔ heat pump only) leave R8 in place.
 
 ### Bias resistors
 
@@ -193,6 +197,6 @@ No response → check wiring/A-B polarity, baud rate, slave DIP switches.
 |---------|--------------|
 | HA probe: `cannot_connect` | Wrong IP, bridge not on WiFi, port not 8899 |
 | HA probe: `modbus_error` | A/B swapped, wrong baud, wrong slave addr, DE/RE issue |
-| Intermittent CRC errors | A/B loose, missing GND, baud mismatch, termination missing on long cable |
+| Intermittent CRC errors | A/B loose, missing GND, baud mismatch, no termination at the heat-pump end (bridge end always has R8) |
 | Works with `nc` but not HA | Stray `nc` session still connected (`exclusive` mode — it owns the bus) |
 | No TX LED activity | Logger claiming UART0 — ensure `hardware_uart: USB_CDC` if validation warns |
