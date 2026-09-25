@@ -9,6 +9,7 @@ All notable changes to this project will be documented in this file.
 - Remove dead `client = ModbusRTUClient(...)` left behind by the same refactor (the probe creates its own client).
 - Replace unused `REG_CONTROL_WORD` import with `REG_RUNNING_MODE` in config_flow.py.
 - `WIRING.md`: claimed the HAT's 120 Ω termination (R8) could be enabled via H1/H2 jumpers. Verified against the schematic netlist: R8 is hard-wired across A/B (no jumper exists) and H1/H2 are A/B/GND connection headers. Documented the always-on termination and corrected the troubleshooting entry.
+- `WIRING.md`: the bench test used `nc -q 1`, which nmap's Ncat rejects (`invalid option -- 'q'`) and BusyBox nc does not have. Documented the per-flavor hang-up flag (`-q 1`, Ncat's `-i 2`, or a `timeout` wrapper) plus a troubleshooting entry.
 
 ### Added
 - **ESPHome Pico 2 W RS485 bridge** (`esphome/heatpump-bridge.yaml`): transparent Modbus RTU-over-TCP server on port 8899 that replaces the Waveshare RS485-to-ETH gateway. Uses `nebulous/esphome-uart-link` (`uart_tcp_server` + `uart_bridge`), Waveshare Pico-2CH-RS485 channel 0 (GPIO0/GPIO1), exclusive client mode, board `rpipico2w`. The HA integration is unchanged and connects to the Pico exactly as it did to the gateway.

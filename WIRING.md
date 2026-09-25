@@ -188,6 +188,18 @@ R7/R9 (4.7 kΩ) provide failsafe biasing on A/B — always present, no action ne
 printf '\x11\x03\x00\x3e\x00\x01\x04\x0c' | nc -q 1 <bridge-ip> 8899 | xxd
 ```
 
+The bridge never closes an idle socket, so `nc` needs a hang-up flag or it
+blocks forever — and the flag is not the same in every netcat:
+
+| Your `nc` | Hang-up flag |
+|-----------|--------------|
+| netcat-openbsd, netcat-traditional, ncat ≥ 7.93 | `-q 1` |
+| older nmap **Ncat** (prints `nc: invalid option -- 'q'`) | `-i 2` |
+| BusyBox nc / unknown | wrap it: `timeout 3 nc <bridge-ip> 8899` (macOS: `gtimeout 3`) |
+
+Identify yours with `nc -h 2>&1 | head -1` — Ncat prints `Ncat`, the others
+print usage for `nc`.
+
 Expected response starts with `11 03 02 ...` followed by CRC.
 No response → check wiring/A-B polarity, baud rate, slave DIP switches.
 
@@ -198,5 +210,6 @@ No response → check wiring/A-B polarity, baud rate, slave DIP switches.
 | HA probe: `cannot_connect` | Wrong IP, bridge not on WiFi, port not 8899 |
 | HA probe: `modbus_error` | A/B swapped, wrong baud, wrong slave addr, DE/RE issue |
 | Intermittent CRC errors | A/B loose, missing GND, baud mismatch, no termination at the heat-pump end (bridge end always has R8) |
+| `nc: invalid option -- 'q'` | `nc` is nmap **Ncat** — use `-i 2` instead of `-q 1` (see bench test) |
 | Works with `nc` but not HA | Stray `nc` session still connected (`exclusive` mode — it owns the bus) |
 | No TX LED activity | Logger claiming UART0 — ensure `hardware_uart: USB_CDC` if validation warns |
