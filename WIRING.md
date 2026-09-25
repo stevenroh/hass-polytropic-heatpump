@@ -185,7 +185,7 @@ R7/R9 (4.7 kΩ) provide failsafe biasing on A/B — always present, no action ne
 ```bash
 # Read holding register 62 (running modes), slave 17
 # Frame: 11 03 00 3E 00 01 [CRC]
-printf '\x11\x03\x00\x3e\x00\x01\x04\x0c' | nc -q 1 <bridge-ip> 8899 | xxd
+printf '\x11\x03\x00\x3e\x00\x01\xe7\x56' | nc -q 1 <bridge-ip> 8899 | xxd
 ```
 
 The bridge never closes an idle socket, so `nc` needs a hang-up flag or it
